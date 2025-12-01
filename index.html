@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>アメリカ主要都市クイズ</title>
+    <style>
+        body {
+            font-family: sans-serif;
+            background-color: #f0f8ff;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+        }
+        .quiz-container {
+            background-color: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 0 15px rgba(0,0,0,0.1);
+            max-width: 500px;
+            width: 100%;
+            text-align: center;
+        }
+        h1 {
+            color: #333;
+        }
+        .question {
+            font-size: 1.2em;
+            margin-bottom: 20px;
+            font-weight: bold;
+        }
+        .options {
+            display: grid;
+            gap: 10px;
+        }
+        button {
+            padding: 10px 20px;
+            font-size: 1em;
+            cursor: pointer;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            transition: background-color 0.3s;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        button:disabled {
+            background-color: #ccc;
+            cursor: default;
+        }
+        .result {
+            margin-top: 20px;
+            font-weight: bold;
+            min-height: 1.5em;
+        }
+        .score {
+            margin-top: 20px;
+            color: #555;
+        }
+        .correct {
+            background-color: #28a745 !important;
+        }
+        .incorrect {
+            background-color: #dc3545 !important;
+        }
+    </style>
+</head>
+<body>
+
+<div class="quiz-container">
+    <h1>アメリカ都市クイズ</h1>
+    <div id="quiz-box">
+        <div id="question" class="question">ここに問題が表示されます</div>
+        <div id="options" class="options">
+            </div>
+        <div id="result" class="result"></div>
+        <button id="next-btn" style="display:none; margin-top:20px;">次の問題へ</button>
+    </div>
+    <div id="final-score" style="display:none;">
+        <h2>クイズ終了！</h2>
+        <p id="score-text"></p>
+        <button onclick="location.reload()">もう一度挑戦する</button>
+    </div>
+</div>
+
+<script>
+    // クイズのデータ（都市と正解の州、およびダミーの選択肢）
+    const quizData = [
+        {
+            city: "ニューヨーク (New York City)",
+            correct: "ニューヨーク州",
+            options: ["ニュージャージー州", "ニューヨーク州", "コネチカット州", "ペンシルベニア州"]
+        },
+        {
+            city: "ロサンゼルス (Los Angeles)",
+            correct: "カリフォルニア州",
+            options: ["テキサス州", "フロリダ州", "カリフォルニア州", "ネバダ州"]
+        },
+        {
+            city: "シカゴ (Chicago)",
+            correct: "イリノイ州",
+            options: ["ミシガン州", "イリノイ州", "オハイオ州", "インディアナ州"]
+        },
+        {
+            city: "ヒューストン (Houston)",
+            correct: "テキサス州",
+            options: ["アリゾナ州", "ニューメキシコ州", "オクラホマ州", "テキサス州"]
+        },
+        {
+            city: "マイアミ (Miami)",
+            correct: "フロリダ州",
+            options: ["ジョージア州", "サウスカロライナ州", "フロリダ州", "アラバマ州"]
+        },
+        {
+            city: "シアトル (Seattle)",
+            correct: "ワシントン州",
+            options: ["オレゴン州", "ワシントン州", "アイダホ州", "ワシントンD.C."]
+        },
+        {
+            city: "ラスベガス (Las Vegas)",
+            correct: "ネバダ州",
+            options: ["アリゾナ州", "カリフォルニア州", "ユタ州", "ネバダ州"]
+        },
+        {
+            city: "ボストン (Boston)",
+            correct: "マサチューセッツ州",
+            options: ["ニューヨーク州", "マサチューセッツ州", "ロードアイランド州", "メイン州"]
+        }
+    ];
+
+    let currentQuestionIndex = 0;
+    let score = 0;
+
+    const questionEl = document.getElementById("question");
+    const optionsEl = document.getElementById("options");
+    const resultEl = document.getElementById("result");
+    const nextBtn = document.getElementById("next-btn");
+    const quizBox = document.getElementById("quiz-box");
+    const finalScoreBox = document.getElementById("final-score");
+    const scoreText = document.getElementById("score-text");
+
+    // クイズをロードする関数
+    function loadQuiz() {
+        // リセット
+        resultEl.textContent = "";
+        nextBtn.style.display = "none";
+        optionsEl.innerHTML = "";
+        
+        const currentQuiz = quizData[currentQuestionIndex];
+        questionEl.textContent = `Q${currentQuestionIndex + 1}. 「${currentQuiz.city}」がある場所（州）はどこ？`;
+
+        // 選択肢をシャッフルしたい場合はここでシャッフル処理を入れることができますが、
+        // 今回はデータ定義順（または手動でランダムっぽく配置）で表示します。
+        // ※解説用に配列をコピーしてシャッフルする例を入れておきます
+        const shuffledOptions = [...currentQuiz.options].sort(() => Math.random() - 0.5);
+
+        shuffledOptions.forEach(option => {
+            const button = document.createElement("button");
+            button.textContent = option;
+            button.onclick = () => checkAnswer(button, option, currentQuiz.correct);
+            optionsEl.appendChild(button);
+        });
+    }
+
+    // 答え合わせをする関数
+    function checkAnswer(selectedBtn, selectedOption, correctOption) {
+        const buttons = optionsEl.querySelectorAll("button");
+        // 全ボタンを無効化
+        buttons.forEach(btn => btn.disabled = true);
+
+        if (selectedOption === correctOption) {
+            selectedBtn.classList.add("correct");
+            resultEl.textContent = "正解！";
+            resultEl.style.color = "green";
+            score++;
+        } else {
+            selectedBtn.classList.add("incorrect");
+            resultEl.textContent = `残念... 正解は「${correctOption}」です。`;
+            resultEl.style.color = "red";
+            // 正解のボタンも緑色にする
+            buttons.forEach(btn => {
+                if (btn.textContent === correctOption) {
+                    btn.classList.add("correct");
+                }
+            });
+        }
+
+        nextBtn.style.display = "inline-block";
+    }
+
+    // 次の問題へ進むボタン
+    nextBtn.onclick = () => {
+        currentQuestionIndex++;
+        if (currentQuestionIndex < quizData.length) {
+            loadQuiz();
+        } else {
+            showScore();
+        }
+    };
+
+    // 結果表示
+    function showScore() {
+        quizBox.style.display = "none";
+        finalScoreBox.style.display = "block";
+        scoreText.textContent = `あなたのスコアは ${quizData.length}問中 ${score}問正解 でした！`;
+    }
+
+    // 初回ロード
+    loadQuiz();
+
+</script>
+
+</body>
+</html>
