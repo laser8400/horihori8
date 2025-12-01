@@ -3,69 +3,63 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>アメリカ都市配置クイズ</title>
+    <title>アメリカ主要都市クイズ（高精度版）</title>
     <style>
         body {
-            font-family: "Helvetica Neue", Arial, "Hiragino Kaku Gothic ProN", "Hiragino Sans", Meiryo, sans-serif;
-            background-color: #f0f4f8;
+            font-family: "Helvetica Neue", Arial, sans-serif;
+            background-color: #f4f7f6;
             color: #333;
             display: flex;
             flex-direction: column;
             align-items: center;
             min-height: 100vh;
             margin: 0;
-            padding: 20px;
+            padding: 10px;
         }
 
-        h1 {
-            margin-bottom: 10px;
-            font-size: 24px;
-            color: #2c3e50;
-        }
+        h1 { margin: 10px 0; font-size: 24px; color: #2c3e50; }
 
         #game-container {
             width: 100%;
-            max-width: 800px;
+            max-width: 900px;
             background: white;
-            border-radius: 15px;
-            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
-            overflow: hidden;
-            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            padding: 15px;
             text-align: center;
+            position: relative;
         }
 
         #status-bar {
             display: flex;
             justify-content: space-between;
-            margin-bottom: 20px;
+            margin-bottom: 15px;
             font-weight: bold;
-            font-size: 18px;
+            font-size: 16px;
+            color: #555;
         }
 
         #question-area {
-            font-size: 22px;
-            margin-bottom: 20px;
+            font-size: 20px;
+            margin-bottom: 15px;
             padding: 10px;
-            background-color: #e8f4fd;
-            border-radius: 8px;
-            border-left: 5px solid #3498db;
+            background-color: #ecf0f1;
+            border-radius: 6px;
+            border-left: 5px solid #2980b9;
         }
 
-        .highlight {
-            color: #e74c3c;
-            font-weight: bold;
-            font-size: 26px;
-        }
+        .highlight { color: #c0392b; font-weight: bold; font-size: 24px; }
 
         /* Map Styles */
         #map-wrapper {
             position: relative;
             width: 100%;
-            padding-bottom: 60%; /* Aspect ratio for the map */
-            background-color: #b3ddf2; /* Ocean color */
-            border-radius: 10px;
+            /* ViewBox is 960x600, so roughly 62.5% padding for responsiveness */
+            padding-bottom: 62.5%; 
+            background-color: #aed6f1; /* Ocean */
+            border-radius: 8px;
             overflow: hidden;
-            border: 2px solid #ddd;
+            border: 1px solid #bdc3c7;
         }
 
         #usa-map {
@@ -74,12 +68,19 @@
             left: 0;
             width: 100%;
             height: 100%;
+            filter: drop-shadow(2px 4px 6px rgba(0,0,0,0.15));
         }
 
-        .land {
+        .state {
             fill: #fdfdfd;
-            stroke: #aaa;
+            stroke: #bdc3c7; /* State borders */
             stroke-width: 1;
+            stroke-linejoin: round;
+        }
+
+        /* Hover effect on states just for visual feedback */
+        .state:hover {
+            fill: #f0f3f4;
         }
 
         .city-point {
@@ -87,79 +88,61 @@
             stroke: white;
             stroke-width: 2px;
             cursor: pointer;
-            transition: all 0.2s ease;
-            r: 8px; /* Radius of the dot */
+            transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            r: 7px;
         }
 
         .city-point:hover {
             fill: #f39c12;
-            r: 10px;
+            r: 9px; 
+            z-index: 100;
         }
 
         /* Animation classes */
-        .correct-anim {
-            fill: #27ae60 !important;
-            r: 12px !important;
-        }
+        .correct-anim { fill: #27ae60 !important; r: 10px !important; stroke: #fff; }
+        .wrong-anim { fill: #c0392b !important; }
+        .correct-anim-faded { fill: #27ae60 !important; opacity: 0.5; }
 
-        .wrong-anim {
-            fill: #c0392b !important;
-        }
-
-        /* Overlay & Modals */
+        /* Overlay */
         #message-overlay {
             position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(255,255,255,0.85);
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(255,255,255,0.8);
             display: flex;
             flex-direction: column;
             justify-content: center;
             align-items: center;
-            font-size: 24px;
+            font-size: 22px;
             font-weight: bold;
             visibility: hidden;
             opacity: 0;
-            transition: opacity 0.3s;
-            z-index: 10;
+            transition: opacity 0.2s;
+            backdrop-filter: blur(2px);
         }
-
-        #message-overlay.visible {
-            visibility: visible;
-            opacity: 1;
-        }
+        #message-overlay.visible { visibility: visible; opacity: 1; }
 
         .btn {
-            margin-top: 20px;
-            padding: 10px 20px;
-            background-color: #3498db;
+            margin-top: 15px;
+            padding: 10px 25px;
+            background-color: #2980b9;
             color: white;
             border: none;
-            border-radius: 5px;
-            font-size: 18px;
+            border-radius: 4px;
+            font-size: 16px;
             cursor: pointer;
-            transition: background 0.2s;
         }
+        .btn:hover { background-color: #1abc9c; }
 
-        .btn:hover {
-            background-color: #2980b9;
-        }
-
-        #result-screen {
-            display: none;
-        }
-
+        #result-screen { display: none; margin-top: 20px;}
     </style>
 </head>
 <body>
 
-    <h1>🇺🇸 アメリカ主要都市配置クイズ</h1>
+    <h1>🇺🇸 アメリカ主要都市クイズ</h1>
 
     <div id="game-container">
         <div id="start-screen">
-            <p>地図上の点をクリックして、都市の場所を当ててください。</p>
+            <p>州境入りの地図で、都市の正確な位置を当ててください。</p>
             <button class="btn" onclick="startGame()">ゲームスタート</button>
         </div>
 
@@ -174,8 +157,10 @@
             </div>
 
             <div id="map-wrapper">
-                <svg id="usa-map" viewBox="0 0 960 600" preserveAspectRatio="xMidYMid slice">
-                    <path class="land" d="M936,211 L958,185 L916,155 L926,128 L897,117 L879,88 L892,72 L863,55 L844,66 L828,66 L812,85 L764,96 L748,93 L729,114 L716,108 L697,125 L652,117 L627,133 L607,117 L595,122 L582,108 L582,88 L540,66 L498,69 L486,50 L421,50 L411,28 L373,28 L360,50 L318,50 L279,53 L241,47 L196,47 L190,66 L180,61 L167,77 L151,69 L125,77 L116,47 L80,55 L80,83 L51,83 L26,99 L16,133 L26,177 L13,205 L16,246 L39,266 L39,282 L55,296 L61,318 L93,332 L116,366 L151,366 L186,346 L206,357 L215,382 L267,382 L292,407 L308,402 L308,449 L360,466 L395,496 L414,529 L443,535 L456,562 L482,571 L498,540 L514,546 L552,540 L568,521 L604,521 L627,504 L646,504 L662,490 L681,490 L675,471 L700,457 L710,432 L736,441 L748,421 L742,407 L768,394 L771,366 L758,355 L784,335 L777,321 L806,310 L806,291 L832,282 L825,260 L857,249 L854,233 L883,219 L899,222 L936,211 Z" />
+                <svg id="usa-map" viewBox="0 0 960 600">
+                    <g id="states-layer">
+                        <path class="state" d="M225.8,405.3l-2.6-4.5l0.4-1.2l-1.3-1.6l0.8-2.3l-12.7-27.1l-61.9-24.3l-12.1,30.3l-8.5,3.6l-3.3,13.2l0.2,4.8l26.9,13.6l10.8-2.6l12.4,14.6l18.4,0.1l7.3-1.8L225.8,405.3z" id="AZ"/><path class="state" d="M149.3,376.1l12.1-30.3l-22.3-13.6l-46.7,11.3L89,348l1.3,7.5l9.1,5.2l7.7,1.8l6.1,6.5l8.6,4.6L149.3,376.1z" id="CA-S"/><path class="state" d="M89,348l3.4-4.5l-32.9-88l-40.4,16.6l14.4,49.8l5.2,8.6l7.7,5.5l9,1.7l14.7,6.3L89,348z" id="CA"/><path class="state" d="M223.2,400.8l2.6,4.5l-25.2,14.8l3.6,56.9l68.7,0l2.3-59l-42.9,0l-0.7-19.3L223.2,400.8z" id="NM"/><path class="state" d="M200.6,420.1l25.2-14.8l30.8,55.5l1.6,26.7l21.4,12.7l17.7,29.9l19.9,10.2l12.8,22.2l-8.6,12.5l-12.6-1.5l-11.5,5.1l-10.3,11l-3.8,11.4l-11.4,2.5l-12.1-7.2l-27-21.6l-19.5-23.7l-4.2-22.5l-3.6-56.9L200.6,420.1z" id="TX"/><path class="state" d="M830.5,510.9l-11.3-2.6l-20.9-18.7l-4.5-8.5l-19.1-1.2l-25.3,0.3l-2.4,26.8l8,10.6l15,36.5l12.1,20.5l9.2,3.3l6.5-5.9l-2.9-10.4l-6.5-18.5l2.4-12.2l11.4-18.9l15.1-9.9l10.9-2.9L830.5,510.9z" id="FL"/><path class="state" d="M161.4,345.8l22.3,13.6l60.2-21.7l-3.6-76l-50.5-2.2L147.2,316l2.3,27.9L161.4,345.8z" id="NV"/><path class="state" d="M244,337.7l-60.2,21.7l12.7,27.1l26.6-17.2l8.4-3.1l0.7,19.3l42.9,0l2.5-44.5L244,337.7z" id="CO"/><path class="state" d="M190,259.5l50.5,2.2l2.3-43.9l-42.6-6.4l-12.2,28.6L190,259.5z" id="UT"/><path class="state" d="M59.5,255.5l32.9,88l2-6.5l25-117.8l-15.3-4.1L95.5,202L55.9,219L59.5,255.5z" id="OR"/><path class="state" d="M104.1,215.1l-8.6,13l15.3,4.1l20.8-97.7l-65.7-18.3l-5.6,8.6l-0.9,13l11.6,21.8l3.1,17.4l14.8,25.3L104.1,215.1z" id="WA"/><path class="state" d="M119.4,228.2L94.4,346l46.7-11.3l6.3-75.2L131.6,215L119.4,228.2z" id="ID"/><path class="state" d="M331.1,192.5l-88.3,6.3l-2.3,43.9l3.6,76l33.1-3.6l-2-45.7l54.8-5.3L331.1,192.5z" id="WY"/><path class="state" d="M242.8,198.8l88.3-6.3l-5.3-60.2l-114.7,14.7l12.2,46.8L242.8,198.8z" id="MT"/><path class="state" d="M439,363.8l-5.8-51.2l-51.5,4.7l-1.8,47.9l59.1,1.1V363.8z" id="MO"/><path class="state" d="M381.7,317.3l51.5-4.7l-4.1-41.9l-50.6,0.9L381.7,317.3z" id="IA"/><path class="state" d="M570.6,275l-40.4,1.8l-10.3,5.9l-4.1,23l4.7,59.3l15.5,5.2l20.9-19.1l11.4-32.9L570.6,275z" id="OH"/><path class="state" d="M378.5,271.6l50.6-0.9l-4.1-49.8l-60.2,3.8L378.5,271.6z" id="MN"/><path class="state" d="M364.8,224.7l60.2-3.8l-2.7-32.2l-96.6,11.3l5.3,60.2l-1.2,55.1l48.7-0.4L364.8,224.7z" id="ND_SD"/><path class="state" d="M425,188.7l2.7,32.2l4.1,49.8l4.1,41.9l51.9,4.2l-4-50.5l-8.6-3.8l-1.6-9.7l6.5-12.8l12.4-31.1l-10.4-1.6l-10.4,6.8l-10.4-14.7l-16-1.1L425,188.7z" id="WI"/><path class="state" d="M487.8,316.8l-51.9-4.2l5.8,51.2l2.3,19.3l15.3,13.8l21.6-11.8l10.3,2.7l0.7-72.2L487.8,316.8z" id="IL"/><path class="state" d="M492.3,315.6l-0.7,72.2l12.4,5.4l24.5-3.4l1.8-68L492.3,315.6z" id="IN"/><path class="state" d="M579.5,257.6l-8.9,17.4l40.4-1.8l38.2-22.1l-14.4-42.9l-22.1,12.2l-21.4,12.5l-6.8,11.3L579.5,257.6z" id="PA"/><path class="state" d="M729,190.4l-14.2,20.8l5.2,16.7l-9.5,4.5l-3.8-10.6l-11.5,1.1l-3.8,11.5l25,56l17.7-18.7l5.2-13.8l23.5-18.9l-3.6-25.2l-10.6-13.3L729,190.4z" id="NY"/><path class="state" d="M848,105l-19.4,4.1l-0.9,12.4l-11.1,1.1l-3.8,13.1l-17.1,3.4l1.1,12.6l10.1,6.8l-1.8,5.4l11.9,14.6l5.2-14.9l24.1-13.5l14.9-35.4L848,105z" id="NE"/><path class="state" d="M259,475.6l-2.3-59l-2.5,44.5l65.2-6.5l2.9,64.3l-26.6-4.5l-12.8,10.6l-6.1-4.7L259,475.6z" id="OK"/><path class="state" d="M322.3,454.6l-2.9-64.3l-48.7,0.4l5.4,62.8L322.3,454.6z" id="KS"/><path class="state" d="M276.1,390.7l48.7-0.4l1.2-55.1l-54.8,5.3l2,45.7L276.1,390.7z" id="NEB"/><path class="state" d="M570,361.2l-21.4,24.3l-45.7-4.1l-12.8,14.9l12.4,32l53.5-6.1l6.8-11.7l16.4-1.8L570,361.2z" id="NC"/><path class="state" d="M608.2,306.4l-16.7,11.5l-20.9,19.1l-15.5-5.2l-4.7-59.3l15.1-6.5l30.6,25.9L608.2,306.4z" id="WV"/><path class="state" d="M649,307.3l-38.2,22.1l16.7-11.5l-11.9,25.5l9.5,17.8l-16.4,1.8l20,35.3l16.7-10.8l10.1-26.8l14.4-39.6L649,307.3z" id="VA"/><path class="state" d="M502.8,422.4l45.7,4.1l21.4-24.3l9.5,17.8l-13.5,37.3l-10.4,0.7l-4.5,14.2l-20.7-1.1L502.8,422.4z" id="TN"/><path class="state" d="M439,363.8l2.3,19.3l17.8-3.4l20.5,3.6l4.5,41.9l-22.1,2.7l-3.8,17.1l-17.1,1.1l-5.6-11l-34.9,10.6l-5.4-62.8l46.1-4.1L439,363.8z" id="AR"/><path class="state" d="M410.6,446.6l34.9-10.6l5.6,11l-3.2,35.8l6.3,9.5l-6.8,5.4l-11.3,1.4l-7-8.1l-16.9,8.3l-2.7-8.1l-15.8,1.4l-1.6-26.7l14.9-15.3L410.6,446.6z" id="LA"/><path class="state" d="M510,482.3l21.6-11.1l4.5-14.2l10.4-0.7l13.5-37.3l2.7,21.8l28.6,8.6l-14.9,50.8l-40.9,0.2L510,482.3z" id="MS_AL"/><path class="state" d="M591.3,449.4l-28.6-8.6l-2.7-21.8l13.1,2.5l29.9-5.2l-12.8,40.5l14.4,26.1l-8,10.6l-19.1-1.2l-1.1-15.5L591.3,449.4z" id="GA"/><path class="state" d="M573,421.3l29.9-5.2l-13.1-2.5l16.4-1.8l-9.5-17.8l13.1-36.2l18.4,5.4l-13.3,37.8l-2.3,18.5L573,421.3z" id="SC"/><path fill="none" stroke="#7f8c8d" stroke-width="1.5" d="M104,215 l-65,18 l14,-49 l40,-16 l32,88 l25,-117 l114,-14 l5,60 l88,6 l54,5 l1,-55 l-5,-60 l96,-11 l2,32 l-60,3 l4,49 l-50,0 l40,1 l8,-17 l6,-11 l21,-12 l22,-12 l14,42 l-38,22 l40,-1 l10,-5 l4,-23 l11,32 l2,30 l-6,11 l-53,6 l-12,-32 l12,-14 l45,4 l21,-24 l9,17 l-16,1 l13,2 l-29,5 l12,37 l2,18 l13,-37 l18,-5 l-13,-36 l20,-35 l16,-1 l-9,-17 l11,-25 l-16,11 l38,-22 l18,17 l10,13 l3,25 l-23,18 l-5,13 l-17,18 l-25,-56 l3,-11 l11,-1 l3,10 l9,-4 l-5,-16 l14,-20 l54,19 l-14,35 l-24,13 l-5,14 l-11,-14 l1,5 l-10,-6 l-1,-12 l17,-3 l3,-13 l11,-1 l0,-12 l19,-4 l16,35 l-34,80 l-10,2 l-15,9 l-11,18 l-2,12 l6,18 l2,10 l-6,5 l-9,-3 l-12,-20 l-15,-36 l-8,-10 l2,-26 l25,0 l19,1 l4,8 l20,18 l11,2 l14,-34 l-11,-28 l-40,0 l14,-50 l-28,-8 l-2,-21 l-13,37 l-10,0 l-4,14 l-21,11 l26,16 l1,15 l19,1 l8,-10 l-14,-26 l12,-40 l-29,5 l-13,-2 l2,21 l28,8 l26,76 l-14,0 l-12,31 l-14,1 l-10,5 l-11,3 l-12,-3 l-17,-3 l-12,7 l-11,-2 l-3,-11 l-10,-11 l-11,-5 l-12,1 l-8,-12 l-12,-22 l-19,-10 l-17,-29 l-21,-12 l-1,-26 l-30,-55 l-25,14 l-27,51 l-7,1 l-18,0 l-12,-14 l-10,2 l-26,-13 l0,-4 l3,-13 l8,-3 l12,-30 l61,24 l12,27 l25,-44 l-12,-30 l-60,-21 l-14,-29 l-2,-27 l14,-29 l50,2 l3,76 l-60,21 l-22,-13 l-14,28 l-8,-4 l-6,-6 l-7,-1 l-9,-5 l-1,-7 z" />
+                    </g>
                     
                     <g id="cities-layer"></g>
                 </svg>
@@ -196,33 +181,36 @@
     </div>
 
     <script>
-        // City Data: Coordinates based on the SVG viewBox (960x600)
-        // Adjustments made to fit the simplified map path roughly
+        // City Data: Coordinates calibrated for the Albers USA ViewBox (960x600)
+        // These are much more accurate relative to the state borders provided.
         const cities = [
-            { id: 1, name: "ニューヨーク", x: 860, y: 150 },
-            { id: 2, name: "ロサンゼルス", x: 80, y: 320 },
-            { id: 3, name: "シカゴ", x: 630, y: 170 },
-            { id: 4, name: "ヒューストン", x: 500, y: 480 },
-            { id: 5, name: "シアトル", x: 100, y: 40 },
-            { id: 6, name: "マイアミ", x: 800, y: 530 },
-            { id: 7, name: "サンフランシスコ", x: 40, y: 250 },
-            { id: 8, name: "デンバー", x: 340, y: 260 },
-            { id: 9, name: "ラスベガス", x: 130, y: 290 },
-            { id: 10, name: "ニューオーリンズ", x: 600, y: 480 },
-            { id: 11, name: "ボストン", x: 900, y: 120 },
-            { id: 12, name: "アトランタ", x: 700, y: 380 },
-            { id: 13, name: "ワシントンD.C.", x: 810, y: 210 },
-            { id: 14, name: "ダラス", x: 480, y: 420 },
-            { id: 15, name: "フェニックス", x: 190, y: 350 }
+            { id: 1, name: "ニューヨーク", x: 795, y: 195 },
+            { id: 2, name: "ロサンゼルス", x: 95, y: 355 },
+            { id: 3, name: "シカゴ", x: 575, y: 220 },
+            { id: 4, name: "ヒューストン", x: 445, y: 460 },
+            { id: 5, name: "シアトル", x: 105, y: 60 },
+            { id: 6, name: "マイアミ", x: 760, y: 535 },
+            { id: 7, name: "サンフランシスコ", x: 55, y: 290 },
+            { id: 8, name: "デンバー", x: 300, y: 290 },
+            { id: 9, name: "ラスベガス", x: 155, y: 310 },
+            { id: 10, name: "ニューオーリンズ", x: 535, y: 465 },
+            { id: 11, name: "ボストン", x: 840, y: 165 },
+            { id: 12, name: "アトランタ", x: 630, y: 405 },
+            { id: 13, name: "ワシントンD.C.", x: 730, y: 260 },
+            { id: 14, name: "ダラス", x: 435, y: 405 },
+            { id: 15, name: "フェニックス", x: 190, y: 380 },
+            { id: 16, name: "デトロイト", x: 620, y: 205 },
+            { id: 17, name: "ミネアポリス", x: 500, y: 165 },
+            { id: 18, name: "セントルイス", x: 540, y: 305 },
+            { id: 19, name: "フィラデルフィア", x: 780, y: 225 },
+            { id: 20, name: "オーランド", x: 745, y: 500 }
         ];
 
         let currentQuestionIndex = 0;
         let score = 0;
         let targetCity = null;
-        let availableCities = [];
         let questionOrder = [];
 
-        // Setup the game
         function startGame() {
             document.getElementById('start-screen').style.display = 'none';
             document.getElementById('game-play').style.display = 'block';
@@ -230,9 +218,7 @@
             // Randomly select 10 questions
             questionOrder = [...cities].sort(() => 0.5 - Math.random()).slice(0, 10);
             
-            // Draw all cities on the map
             renderCities();
-            
             currentQuestionIndex = 0;
             score = 0;
             updateUI();
@@ -240,15 +226,16 @@
 
         function renderCities() {
             const layer = document.getElementById('cities-layer');
-            layer.innerHTML = ''; // Clear existing
+            layer.innerHTML = ''; 
 
             cities.forEach(city => {
                 const circle = document.createElementNS("http://www.w3.org/2000/svg", "circle");
                 circle.setAttribute("cx", city.x);
                 circle.setAttribute("cy", city.y);
-                circle.setAttribute("r", 8); // Default radius
                 circle.setAttribute("class", "city-point");
                 circle.setAttribute("data-id", city.id);
+                // Add title for native tooltip if user hovers long enough (optional hint)
+                // circle.setAttribute("title", "???"); 
                 circle.onclick = (e) => handleCityClick(e, city);
                 layer.appendChild(circle);
             });
@@ -266,19 +253,16 @@
             document.getElementById('score-text').textContent = `スコア: ${score}`;
             document.getElementById('target-city').textContent = targetCity.name;
             
-            // Reset overlay
             const overlay = document.getElementById('message-overlay');
             overlay.classList.remove('visible');
             
-            // Reset dots styles
             document.querySelectorAll('.city-point').forEach(dot => {
-                dot.classList.remove('correct-anim', 'wrong-anim');
-                dot.style.pointerEvents = 'auto'; // Enable clicks
+                dot.classList.remove('correct-anim', 'wrong-anim', 'correct-anim-faded');
+                dot.style.pointerEvents = 'auto';
             });
         }
 
         function handleCityClick(event, selectedCity) {
-            // Disable all clicks
             document.querySelectorAll('.city-point').forEach(dot => {
                 dot.style.pointerEvents = 'none';
             });
@@ -293,20 +277,17 @@
             if (isCorrect) {
                 score++;
                 clickedDot.classList.add('correct-anim');
-                feedbackText.textContent = "正解！ ⭕️";
-                feedbackText.style.color = "#27ae60";
+                feedbackText.innerHTML = `<span style="color:#27ae60; font-size:40px;">⭕️</span><br>正解！`;
             } else {
                 clickedDot.classList.add('wrong-anim');
                 
                 // Highlight the actual correct answer
                 const correctDot = document.querySelector(`.city-point[data-id="${targetCity.id}"]`);
-                if(correctDot) correctDot.classList.add('correct-anim');
+                if(correctDot) correctDot.classList.add('correct-anim-faded');
 
-                feedbackText.textContent = `残念... 正解は「${targetCity.name}」でした`;
-                feedbackText.style.color = "#c0392b";
+                feedbackText.innerHTML = `<span style="color:#c0392b; font-size:40px;">✖</span><br>正解は「${targetCity.name}」でした`;
             }
 
-            // Show overlay
             if (currentQuestionIndex === questionOrder.length - 1) {
                 nextBtn.textContent = "結果を見る";
             } else {
@@ -329,13 +310,13 @@
             
             const commentElement = document.getElementById('comment');
             if (score === 10) {
-                commentElement.textContent = "完璧です！アメリカ地理マスターですね！🏆";
-            } else if (score >= 7) {
-                commentElement.textContent = "素晴らしい！かなり詳しいですね。👏";
-            } else if (score >= 4) {
-                commentElement.textContent = "まずまずの結果です。👍";
+                commentElement.textContent = "完璧！アメリカの地理はバッチリですね！🏆";
+            } else if (score >= 8) {
+                commentElement.textContent = "素晴らしい！ほとんど正解です。🇺🇸";
+            } else if (score >= 5) {
+                commentElement.textContent = "まずまずの結果です。州の位置を覚えるとさらに伸びます！";
             } else {
-                commentElement.textContent = "もう少し勉強しましょう... 📚";
+                commentElement.textContent = "ドンマイ！地図をよく見て再挑戦しましょう。";
             }
         }
     </script>
