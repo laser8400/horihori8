@@ -3,228 +3,341 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>アメリカ都市・地図クイズ</title>
-    <script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
+    <title>アメリカ都市配置クイズ</title>
     <style>
         body {
-            font-family: sans-serif;
-            background-color: #f4f4f9;
-            text-align: center;
+            font-family: "Helvetica Neue", Arial, "Hiragino Kaku Gothic ProN", "Hiragino Sans", Meiryo, sans-serif;
+            background-color: #f0f4f8;
+            color: #333;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
             margin: 0;
             padding: 20px;
         }
-        .container {
-            max-width: 900px;
-            margin: 0 auto;
-            background: white;
-            padding: 20px;
-            border-radius: 10px;
-            box-shadow: 0 0 15px rgba(0,0,0,0.1);
+
+        h1 {
+            margin-bottom: 10px;
+            font-size: 24px;
+            color: #2c3e50;
         }
-        h1 { margin-bottom: 10px; }
-        .info-panel {
-            margin-bottom: 15px;
-            padding: 15px;
-            background-color: #e9ecef;
-            border-radius: 5px;
-        }
-        #question-text {
-            font-size: 1.5em;
-            font-weight: bold;
-            color: #007bff;
-        }
-        #status-text {
-            font-size: 1.1em;
-            font-weight: bold;
-            height: 1.5em; /* 高さを確保してガタつき防止 */
-            margin-top: 10px;
-        }
-        /* 地図のコンテナ */
-        #regions_div {
+
+        #game-container {
             width: 100%;
-            height: 500px;
-            border: 1px solid #ddd;
-            background-color: #cce5ff; /* 海の色っぽく */
+            max-width: 800px;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+            overflow: hidden;
+            padding: 20px;
+            text-align: center;
         }
-        .score-board {
-            margin-top: 10px;
-            font-size: 0.9em;
-            color: #666;
+
+        #status-bar {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 20px;
+            font-weight: bold;
+            font-size: 18px;
         }
-        /* 正解・不正解の色 */
-        .text-correct { color: #28a745; }
-        .text-wrong { color: #dc3545; }
-        
-        button#retry-btn {
-            display: none;
+
+        #question-area {
+            font-size: 22px;
+            margin-bottom: 20px;
+            padding: 10px;
+            background-color: #e8f4fd;
+            border-radius: 8px;
+            border-left: 5px solid #3498db;
+        }
+
+        .highlight {
+            color: #e74c3c;
+            font-weight: bold;
+            font-size: 26px;
+        }
+
+        /* Map Styles */
+        #map-wrapper {
+            position: relative;
+            width: 100%;
+            padding-bottom: 60%; /* Aspect ratio for the map */
+            background-color: #b3ddf2; /* Ocean color */
+            border-radius: 10px;
+            overflow: hidden;
+            border: 2px solid #ddd;
+        }
+
+        #usa-map {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+        }
+
+        .land {
+            fill: #fdfdfd;
+            stroke: #aaa;
+            stroke-width: 1;
+        }
+
+        .city-point {
+            fill: #34495e;
+            stroke: white;
+            stroke-width: 2px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            r: 8px; /* Radius of the dot */
+        }
+
+        .city-point:hover {
+            fill: #f39c12;
+            r: 10px;
+        }
+
+        /* Animation classes */
+        .correct-anim {
+            fill: #27ae60 !important;
+            r: 12px !important;
+        }
+
+        .wrong-anim {
+            fill: #c0392b !important;
+        }
+
+        /* Overlay & Modals */
+        #message-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(255,255,255,0.85);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            font-size: 24px;
+            font-weight: bold;
+            visibility: hidden;
+            opacity: 0;
+            transition: opacity 0.3s;
+            z-index: 10;
+        }
+
+        #message-overlay.visible {
+            visibility: visible;
+            opacity: 1;
+        }
+
+        .btn {
             margin-top: 20px;
             padding: 10px 20px;
-            font-size: 1.2em;
-            background-color: #007bff;
+            background-color: #3498db;
             color: white;
             border: none;
             border-radius: 5px;
+            font-size: 18px;
             cursor: pointer;
+            transition: background 0.2s;
         }
+
+        .btn:hover {
+            background-color: #2980b9;
+        }
+
+        #result-screen {
+            display: none;
+        }
+
     </style>
 </head>
 <body>
 
-<div class="container">
-    <h1>🇺🇸 アメリカ都市・地図クイズ</h1>
-    <p>表示された都市がある州を地図上でクリックしてください。</p>
-    
-    <div class="info-panel">
-        <div id="question-text">読み込み中...</div>
-        <div id="status-text"></div>
-        <div class="score-board">現在: <span id="current-score">0</span>点 / <span id="current-q-num">0</span>問目</div>
+    <h1>🇺🇸 アメリカ主要都市配置クイズ</h1>
+
+    <div id="game-container">
+        <div id="start-screen">
+            <p>地図上の点をクリックして、都市の場所を当ててください。</p>
+            <button class="btn" onclick="startGame()">ゲームスタート</button>
+        </div>
+
+        <div id="game-play" style="display: none;">
+            <div id="status-bar">
+                <span id="progress-text">第 1 / 10 問</span>
+                <span id="score-text">スコア: 0</span>
+            </div>
+
+            <div id="question-area">
+                <span class="highlight" id="target-city">New York</span> はどこ？
+            </div>
+
+            <div id="map-wrapper">
+                <svg id="usa-map" viewBox="0 0 960 600" preserveAspectRatio="xMidYMid slice">
+                    <path class="land" d="M936,211 L958,185 L916,155 L926,128 L897,117 L879,88 L892,72 L863,55 L844,66 L828,66 L812,85 L764,96 L748,93 L729,114 L716,108 L697,125 L652,117 L627,133 L607,117 L595,122 L582,108 L582,88 L540,66 L498,69 L486,50 L421,50 L411,28 L373,28 L360,50 L318,50 L279,53 L241,47 L196,47 L190,66 L180,61 L167,77 L151,69 L125,77 L116,47 L80,55 L80,83 L51,83 L26,99 L16,133 L26,177 L13,205 L16,246 L39,266 L39,282 L55,296 L61,318 L93,332 L116,366 L151,366 L186,346 L206,357 L215,382 L267,382 L292,407 L308,402 L308,449 L360,466 L395,496 L414,529 L443,535 L456,562 L482,571 L498,540 L514,546 L552,540 L568,521 L604,521 L627,504 L646,504 L662,490 L681,490 L675,471 L700,457 L710,432 L736,441 L748,421 L742,407 L768,394 L771,366 L758,355 L784,335 L777,321 L806,310 L806,291 L832,282 L825,260 L857,249 L854,233 L883,219 L899,222 L936,211 Z" />
+                    
+                    <g id="cities-layer"></g>
+                </svg>
+
+                <div id="message-overlay">
+                    <div id="feedback-text"></div>
+                    <button class="btn" id="next-btn" onclick="nextQuestion()">次へ</button>
+                </div>
+            </div>
+        </div>
+
+        <div id="result-screen">
+            <h2>結果発表</h2>
+            <p id="final-score" style="font-size: 28px; font-weight: bold; color: #2c3e50;">0 / 10</p>
+            <p id="comment"></p>
+            <button class="btn" onclick="location.reload()">もう一度遊ぶ</button>
+        </div>
     </div>
 
-    <div id="regions_div"></div>
-    
-    <button id="retry-btn" onclick="location.reload()">もう一度遊ぶ</button>
-</div>
+    <script>
+        // City Data: Coordinates based on the SVG viewBox (960x600)
+        // Adjustments made to fit the simplified map path roughly
+        const cities = [
+            { id: 1, name: "ニューヨーク", x: 860, y: 150 },
+            { id: 2, name: "ロサンゼルス", x: 80, y: 320 },
+            { id: 3, name: "シカゴ", x: 630, y: 170 },
+            { id: 4, name: "ヒューストン", x: 500, y: 480 },
+            { id: 5, name: "シアトル", x: 100, y: 40 },
+            { id: 6, name: "マイアミ", x: 800, y: 530 },
+            { id: 7, name: "サンフランシスコ", x: 40, y: 250 },
+            { id: 8, name: "デンバー", x: 340, y: 260 },
+            { id: 9, name: "ラスベガス", x: 130, y: 290 },
+            { id: 10, name: "ニューオーリンズ", x: 600, y: 480 },
+            { id: 11, name: "ボストン", x: 900, y: 120 },
+            { id: 12, name: "アトランタ", x: 700, y: 380 },
+            { id: 13, name: "ワシントンD.C.", x: 810, y: 210 },
+            { id: 14, name: "ダラス", x: 480, y: 420 },
+            { id: 15, name: "フェニックス", x: 190, y: 350 }
+        ];
 
-<script type="text/javascript">
-    // Google Chartsのロード
-    google.charts.load('current', {
-        'packages':['geochart'],
-    });
-    google.charts.setOnLoadCallback(drawRegionsMap);
+        let currentQuestionIndex = 0;
+        let score = 0;
+        let targetCity = null;
+        let availableCities = [];
+        let questionOrder = [];
 
-    // クイズデータ（主要20都市）
-    // codeはISO 3166-2:US形式 (US-XX)
-    const quizData = [
-        { city: "ニューヨーク (New York City)", code: "US-NY", state: "ニューヨーク州" },
-        { city: "ロサンゼルス (Los Angeles)", code: "US-CA", state: "カリフォルニア州" },
-        { city: "シカゴ (Chicago)", code: "US-IL", state: "イリノイ州" },
-        { city: "ヒューストン (Houston)", code: "US-TX", state: "テキサス州" },
-        { city: "マイアミ (Miami)", code: "US-FL", state: "フロリダ州" },
-        { city: "シアトル (Seattle)", code: "US-WA", state: "ワシントン州" },
-        { city: "ラスベガス (Las Vegas)", code: "US-NV", state: "ネバダ州" },
-        { city: "ボストン (Boston)", code: "US-MA", state: "マサチューセッツ州" },
-        { city: "アトランタ (Atlanta)", code: "US-GA", state: "ジョージア州" },
-        { city: "デンバー (Denver)", code: "US-CO", state: "コロラド州" },
-        { city: "ニューオーリンズ (New Orleans)", code: "US-LA", state: "ルイジアナ州" },
-        { city: "デトロイト (Detroit)", code: "US-MI", state: "ミシガン州" },
-        { city: "フィラデルフィア (Philadelphia)", code: "US-PA", state: "ペンシルベニア州" },
-        { city: "フェニックス (Phoenix)", code: "US-AZ", state: "アリゾナ州" },
-        { city: "ミネアポリス (Minneapolis)", code: "US-MN", state: "ミネソタ州" },
-        { city: "ナッシュビル (Nashville)", code: "US-TN", state: "テネシー州" },
-        { city: "ソルトレイクシティ (Salt Lake City)", code: "US-UT", state: "ユタ州" },
-        { city: "ポートランド (Portland)", code: "US-OR", state: "オレゴン州" },
-        { city: "アンカレッジ (Anchorage)", code: "US-AK", state: "アラスカ州" },
-        { city: "ホノルル (Honolulu)", code: "US-HI", state: "ハワイ州" }
-    ];
-
-    // シャッフル用配列
-    let shuffledQuiz = [];
-    let currentIndex = 0;
-    let score = 0;
-    let chart; // チャートオブジェクト
-    let isProcessing = false; // 連打防止用
-
-    function drawRegionsMap() {
-        // クイズデータをシャッフル
-        shuffledQuiz = [...quizData].sort(() => Math.random() - 0.5);
-        currentIndex = 0;
-        score = 0;
-
-        // 地図の初期化
-        const data = google.visualization.arrayToDataTable([
-            ['State', 'Selectable'],
-            // 全米の州をデータとして定義（色をつけるため）
-            ['US-AL', 0], ['US-AK', 0], ['US-AZ', 0], ['US-AR', 0], ['US-CA', 0],
-            ['US-CO', 0], ['US-CT', 0], ['US-DE', 0], ['US-FL', 0], ['US-GA', 0],
-            ['US-HI', 0], ['US-ID', 0], ['US-IL', 0], ['US-IN', 0], ['US-IA', 0],
-            ['US-KS', 0], ['US-KY', 0], ['US-LA', 0], ['US-ME', 0], ['US-MD', 0],
-            ['US-MA', 0], ['US-MI', 0], ['US-MN', 0], ['US-MS', 0], ['US-MO', 0],
-            ['US-MT', 0], ['US-NE', 0], ['US-NV', 0], ['US-NH', 0], ['US-NJ', 0],
-            ['US-NM', 0], ['US-NY', 0], ['US-NC', 0], ['US-ND', 0], ['US-OH', 0],
-            ['US-OK', 0], ['US-OR', 0], ['US-PA', 0], ['US-RI', 0], ['US-SC', 0],
-            ['US-SD', 0], ['US-TN', 0], ['US-TX', 0], ['US-UT', 0], ['US-VT', 0],
-            ['US-VA', 0], ['US-WA', 0], ['US-WV', 0], ['US-WI', 0], ['US-WY', 0]
-        ]);
-
-        const options = {
-            region: 'US', // アメリカ合衆国を表示
-            resolution: 'provinces', // 州境を表示
-            colorAxis: {colors: ['#white', '#white']}, // デフォルトの色
-            backgroundColor: '#cce5ff', // 海の色
-            datalessRegionColor: '#f5f5f5',
-            defaultColor: '#f5f5f5',
-            legend: 'none', // 凡例なし
-            tooltip: { trigger: 'focus', isHtml: true } // マウスオーバー時の表示制御
-        };
-
-        chart = new google.visualization.GeoChart(document.getElementById('regions_div'));
-
-        // クリックイベントの登録
-        google.visualization.events.addListener(chart, 'regionClick', function(eventData) {
-            checkAnswer(eventData.region);
-        });
-
-        chart.draw(data, options);
-        showNextQuestion();
-    }
-
-    function showNextQuestion() {
-        if (currentIndex < shuffledQuiz.length) {
-            const q = shuffledQuiz[currentIndex];
-            document.getElementById('question-text').textContent = `Q${currentIndex + 1}. 「${q.city}」はどこ？`;
-            document.getElementById('status-text').textContent = "地図をクリックしてください";
-            document.getElementById('status-text').className = "";
-            document.getElementById('current-score').textContent = score;
-            document.getElementById('current-q-num').textContent = currentIndex + 1;
-            isProcessing = false;
-        } else {
-            endGame();
-        }
-    }
-
-    function checkAnswer(clickedRegionCode) {
-        if (isProcessing) return; // 処理中はクリック無効
-        isProcessing = true;
-
-        const currentQ = shuffledQuiz[currentIndex];
-        const statusEl = document.getElementById('status-text');
-
-        // クリックされた地域コード（例: US-NY）と正解を比較
-        if (clickedRegionCode === currentQ.code) {
-            score++;
-            statusEl.textContent = `正解！ (${currentQ.state})`;
-            statusEl.className = "text-correct";
-        } else {
-            statusEl.textContent = `残念... 正解は ${currentQ.state} でした。`;
-            statusEl.className = "text-wrong";
+        // Setup the game
+        function startGame() {
+            document.getElementById('start-screen').style.display = 'none';
+            document.getElementById('game-play').style.display = 'block';
+            
+            // Randomly select 10 questions
+            questionOrder = [...cities].sort(() => 0.5 - Math.random()).slice(0, 10);
+            
+            // Draw all cities on the map
+            renderCities();
+            
+            currentQuestionIndex = 0;
+            score = 0;
+            updateUI();
         }
 
-        // 少し待ってから次の問題へ
-        currentIndex++;
-        setTimeout(showNextQuestion, 1500);
-    }
+        function renderCities() {
+            const layer = document.getElementById('cities-layer');
+            layer.innerHTML = ''; // Clear existing
 
-    function endGame() {
-        document.getElementById('question-text').textContent = "すべての問題が終了しました！";
-        document.getElementById('status-text').textContent = `あなたのスコア: ${score} / ${shuffledQuiz.length}`;
-        document.getElementById('regions_div').style.display = "none";
-        document.getElementById('retry-btn').style.display = "inline-block";
-    }
-
-    // ウィンドウサイズ変更時に地図を再描画（レスポンシブ対応）
-    window.addEventListener('resize', function() {
-        if (chart) {
-             // 簡易的な再描画
-             const data = google.visualization.arrayToDataTable([
-                ['State', 'Val'],
-                ['US-CA', 0] // ダミーデータ（本来は保持したデータを使うべきだが簡略化）
-             ]); 
-             // ※本格的なリサイズ対応にはデータを保持しておく必要がありますが、
-             // 今回はクイズ進行中なのでリロード推奨とします。
+            cities.forEach(city => {
+                const circle = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+                circle.setAttribute("cx", city.x);
+                circle.setAttribute("cy", city.y);
+                circle.setAttribute("r", 8); // Default radius
+                circle.setAttribute("class", "city-point");
+                circle.setAttribute("data-id", city.id);
+                circle.onclick = (e) => handleCityClick(e, city);
+                layer.appendChild(circle);
+            });
         }
-    });
 
-</script>
+        function updateUI() {
+            if (currentQuestionIndex >= questionOrder.length) {
+                endGame();
+                return;
+            }
 
+            targetCity = questionOrder[currentQuestionIndex];
+            
+            document.getElementById('progress-text').textContent = `第 ${currentQuestionIndex + 1} / ${questionOrder.length} 問`;
+            document.getElementById('score-text').textContent = `スコア: ${score}`;
+            document.getElementById('target-city').textContent = targetCity.name;
+            
+            // Reset overlay
+            const overlay = document.getElementById('message-overlay');
+            overlay.classList.remove('visible');
+            
+            // Reset dots styles
+            document.querySelectorAll('.city-point').forEach(dot => {
+                dot.classList.remove('correct-anim', 'wrong-anim');
+                dot.style.pointerEvents = 'auto'; // Enable clicks
+            });
+        }
+
+        function handleCityClick(event, selectedCity) {
+            // Disable all clicks
+            document.querySelectorAll('.city-point').forEach(dot => {
+                dot.style.pointerEvents = 'none';
+            });
+
+            const clickedDot = event.target;
+            const overlay = document.getElementById('message-overlay');
+            const feedbackText = document.getElementById('feedback-text');
+            const nextBtn = document.getElementById('next-btn');
+
+            let isCorrect = (selectedCity.id === targetCity.id);
+
+            if (isCorrect) {
+                score++;
+                clickedDot.classList.add('correct-anim');
+                feedbackText.textContent = "正解！ ⭕️";
+                feedbackText.style.color = "#27ae60";
+            } else {
+                clickedDot.classList.add('wrong-anim');
+                
+                // Highlight the actual correct answer
+                const correctDot = document.querySelector(`.city-point[data-id="${targetCity.id}"]`);
+                if(correctDot) correctDot.classList.add('correct-anim');
+
+                feedbackText.textContent = `残念... 正解は「${targetCity.name}」でした`;
+                feedbackText.style.color = "#c0392b";
+            }
+
+            // Show overlay
+            if (currentQuestionIndex === questionOrder.length - 1) {
+                nextBtn.textContent = "結果を見る";
+            } else {
+                nextBtn.textContent = "次へ";
+            }
+            overlay.classList.add('visible');
+        }
+
+        function nextQuestion() {
+            currentQuestionIndex++;
+            updateUI();
+        }
+
+        function endGame() {
+            document.getElementById('game-play').style.display = 'none';
+            document.getElementById('result-screen').style.display = 'block';
+            
+            const finalScoreElement = document.getElementById('final-score');
+            finalScoreElement.textContent = `${score} / ${questionOrder.length} 問正解`;
+            
+            const commentElement = document.getElementById('comment');
+            if (score === 10) {
+                commentElement.textContent = "完璧です！アメリカ地理マスターですね！🏆";
+            } else if (score >= 7) {
+                commentElement.textContent = "素晴らしい！かなり詳しいですね。👏";
+            } else if (score >= 4) {
+                commentElement.textContent = "まずまずの結果です。👍";
+            } else {
+                commentElement.textContent = "もう少し勉強しましょう... 📚";
+            }
+        }
+    </script>
 </body>
 </html>
