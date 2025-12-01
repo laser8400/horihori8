@@ -1,334 +1,280 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-  <meta charset="UTF-8" />
-  <title>アメリカ主要都市 位置あてクイズ</title>
-  <style>
-    body {
-      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-      margin: 0;
-      padding: 20px;
-      background: #f5f5f5;
-      color: #333;
-    }
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>アメリカ主要都市クイズ</title>
+    <style>
+        body {
+            font-family: "Helvetica Neue", Arial, sans-serif;
+            text-align: center;
+            background-color: #f4f4f4;
+            margin: 0;
+            padding: 20px;
+        }
+        h1 {
+            color: #333;
+        }
+        #game-container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+        }
+        #status-bar {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 20px;
+            font-size: 1.2em;
+            font-weight: bold;
+        }
+        #question-text {
+            font-size: 1.5em;
+            margin-bottom: 20px;
+            color: #0056b3;
+        }
+        /* 地図表示エリア */
+        #map-wrapper {
+            position: relative;
+            width: 100%;
+            /* アスペクト比を維持するための設定 */
+            max-width: 800px; 
+            margin: 0 auto;
+        }
+        #map-image {
+            width: 100%;
+            height: auto;
+            display: block;
+            border: 2px solid #ddd;
+            border-radius: 4px;
+        }
+        
+        /* 地図上のピン（ドット） */
+        .city-dot {
+            position: absolute;
+            width: 20px;
+            height: 20px;
+            background-color: #ff4757; /* デフォルトは赤系 */
+            border: 2px solid white;
+            border-radius: 50%;
+            cursor: pointer;
+            transform: translate(-50%, -50%); /* 中心を座標に合わせる */
+            box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+            transition: transform 0.2s, background-color 0.2s;
+            z-index: 10;
+        }
+        .city-dot:hover {
+            transform: translate(-50%, -50%) scale(1.3);
+            background-color: #ff6b81;
+        }
 
-    h1 {
-      text-align: center;
-      margin-bottom: 10px;
-    }
+        /* 正解・不正解のアニメーション用クラス */
+        .correct-anim {
+            background-color: #2ed573 !important;
+            transform: translate(-50%, -50%) scale(1.5);
+            box-shadow: 0 0 15px #2ed573;
+        }
+        .wrong-anim {
+            background-color: #57606f !important;
+            opacity: 0.5;
+        }
 
-    #app {
-      max-width: 900px;
-      margin: 0 auto;
-      background: #fff;
-      border-radius: 10px;
-      padding: 20px;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-    }
+        #feedback {
+            height: 30px;
+            margin-top: 15px;
+            font-weight: bold;
+            font-size: 1.2em;
+        }
+        .text-correct { color: #2ed573; }
+        .text-wrong { color: #ff4757; }
 
-    #description {
-      margin-bottom: 15px;
-      line-height: 1.6;
-    }
-
-    #map-container {
-      border: 1px solid #ccc;
-      border-radius: 8px;
-      overflow: hidden;
-      margin-bottom: 15px;
-      background: linear-gradient(#dfefff, #e6f4ff);
-    }
-
-    #us-map {
-      width: 100%;
-      height: auto;
-      display: block;
-    }
-
-    .marker-circle {
-      cursor: pointer;
-      stroke: #333;
-      stroke-width: 1.5;
-      transition: transform 0.1s ease, stroke-width 0.1s ease;
-    }
-
-    .marker-circle:hover {
-      transform: scale(1.15);
-      stroke-width: 2;
-    }
-
-    .marker-label {
-      font-size: 14px;
-      font-weight: bold;
-      pointer-events: none; /* テキストではなく丸をクリックさせる */
-    }
-
-    #question {
-      margin-bottom: 10px;
-      font-size: 18px;
-      font-weight: bold;
-    }
-
-    #hint {
-      font-size: 14px;
-      color: #555;
-      margin-bottom: 8px;
-    }
-
-    #feedback {
-      min-height: 24px;
-      margin: 8px 0 12px;
-      font-weight: bold;
-    }
-
-    #score {
-      margin-top: 8px;
-      font-size: 14px;
-      color: #444;
-    }
-
-    #controls {
-      display: flex;
-      gap: 10px;
-      flex-wrap: wrap;
-      align-items: center;
-    }
-
-    button {
-      border: none;
-      border-radius: 5px;
-      padding: 8px 14px;
-      font-size: 14px;
-      cursor: pointer;
-      background: #1976d2;
-      color: #fff;
-      transition: background 0.15s ease, transform 0.1s ease;
-    }
-
-    button:hover {
-      background: #1259a0;
-      transform: translateY(-1px);
-    }
-
-    button:disabled {
-      background: #999;
-      cursor: default;
-      transform: none;
-    }
-
-    @media (max-width: 600px) {
-      #description {
-        font-size: 14px;
-      }
-      #question {
-        font-size: 16px;
-      }
-    }
-  </style>
+        /* リザルト画面 */
+        #result-screen {
+            display: none;
+        }
+        button {
+            padding: 10px 20px;
+            font-size: 1em;
+            background-color: #0056b3;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #004494;
+        }
+    </style>
 </head>
 <body>
-  <div id="app">
-    <h1>アメリカ主要都市 位置あてクイズ</h1>
-    <div id="description">
-      表示された「都市名」が地図上のどの場所か、<b>A〜D</b> のマーカーの中から選んでください。<br />
-      マーカーをクリックすると正解かどうかが表示されます。
+
+<div id="game-container">
+    <div id="quiz-screen">
+        <div id="status-bar">
+            <span id="score">スコア: 0</span>
+            <span id="progress">残り: 0</span>
+        </div>
+        
+        <div id="question-text">読み込み中...</div>
+
+        <div id="map-wrapper">
+            <img src="image.png" id="map-image" alt="アメリカ地図">
+            <div id="dots-container"></div>
+        </div>
+
+        <div id="feedback"></div>
     </div>
 
-    <div id="map-container">
-      <!-- 簡略化したアメリカ本土の地図エリア（800x500の座標空間） -->
-      <svg id="us-map" viewBox="0 0 800 500">
-        <!-- アメリカ本土をざっくり示す長方形 -->
-        <rect x="20" y="20" width="760" height="460" fill="#e0f2f1" stroke="#555" stroke-width="2" />
-
-        <!-- 周囲のラベル（おおよその位置） -->
-        <text x="40" y="40" font-size="14" fill="#555">太平洋</text>
-        <text x="700" y="40" font-size="14" fill="#555">大西洋</text>
-        <text x="350" y="40" font-size="12" fill="#555">カナダ方面</text>
-        <text x="350" y="490" font-size="12" fill="#555">メキシコ・メキシコ湾方面</text>
-
-        <!-- 川っぽい線を一本（飾り） -->
-        <path d="M 450 20 C 460 120 470 200 460 280 C 450 360 440 420 430 480"
-              fill="none" stroke="#90caf9" stroke-width="3" opacity="0.7" />
-
-        <!-- マーカーはJavaScriptで追加 -->
-      </svg>
+    <div id="result-screen">
+        <h2>結果発表</h2>
+        <p id="final-score" style="font-size: 2em; margin: 30px 0;"></p>
+        <button onclick="restartGame()">もう一度挑戦</button>
     </div>
+</div>
 
-    <div id="question"></div>
-    <div id="hint">マーカー横の <b>A, B, C, D</b> と位置を見比べて選んでください。</div>
-
-    <div id="feedback"></div>
-
-    <div id="controls">
-      <button id="next-btn">次の問題</button>
-      <div id="score"></div>
-    </div>
-  </div>
-
-  <script>
-    // ==== データ定義 ====
-    // 緯度・経度はざっくり（本土部分のみ）
-    const cities = [
-      { id: "nyc",   nameJa: "ニューヨーク",         nameEn: "New York",        lat: 40.7128, lon: -74.0060 },
-      { id: "la",    nameJa: "ロサンゼルス",         nameEn: "Los Angeles",     lat: 34.0522, lon: -118.2437 },
-      { id: "chi",   nameJa: "シカゴ",               nameEn: "Chicago",         lat: 41.8781, lon: -87.6298 },
-      { id: "hou",   nameJa: "ヒューストン",         nameEn: "Houston",         lat: 29.7604, lon: -95.3698 },
-      { id: "mia",   nameJa: "マイアミ",             nameEn: "Miami",           lat: 25.7617, lon: -80.1918 },
-      { id: "sf",    nameJa: "サンフランシスコ",     nameEn: "San Francisco",   lat: 37.7749, lon: -122.4194 },
-      { id: "sea",   nameJa: "シアトル",             nameEn: "Seattle",         lat: 47.6062, lon: -122.3321 },
-      { id: "dc",    nameJa: "ワシントンD.C.",       nameEn: "Washington, D.C.",lat: 38.9072, lon: -77.0369 },
-      { id: "bos",   nameJa: "ボストン",             nameEn: "Boston",          lat: 42.3601, lon: -71.0589 },
-      { id: "dal",   nameJa: "ダラス",               nameEn: "Dallas",          lat: 32.7767, lon: -96.7970 },
-      { id: "atl",   nameJa: "アトランタ",           nameEn: "Atlanta",         lat: 33.7490, lon: -84.3880 },
-      { id: "den",   nameJa: "デンバー",             nameEn: "Denver",          lat: 39.7392, lon: -104.9903 }
+<script>
+    // 都市データ：座標(top, left)は画像の左上を(0,0)としたパーセンテージ
+    // 注：画像のアスペクト比によって若干のズレが生じる可能性があるため、
+    // 必要に応じて数値を微調整してください。
+    const citiesData = [
+        { name: "ニューヨーク", top: 28, left: 88 },
+        { name: "ロサンゼルス", top: 58, left: 12 },
+        { name: "シカゴ", top: 32, left: 68 },
+        { name: "マイアミ", top: 86, left: 82 },
+        { name: "シアトル", top: 12, left: 13 },
+        { name: "ヒューストン", top: 78, left: 52 },
+        { name: "サンフランシスコ", top: 46, left: 8 },
+        { name: "ラスベガス", top: 52, left: 16 },
+        { name: "ワシントンD.C.", top: 38, left: 82 },
+        { name: "デンバー", top: 45, left: 35 }
     ];
 
-    // 投影用のざっくりした範囲（アメリカ本土）
-    const minLon = -125, maxLon = -66;
-    const minLat = 25,   maxLat = 50;
-    const mapPadding = 20;
-    const mapWidth = 760;  // rect width
-    const mapHeight = 460; // rect height
+    let currentQuestions = [];
+    let currentQuestionIndex = 0;
+    let score = 0;
+    let isAnswering = true; // 連打防止用
 
-    // 緯度経度 → SVG座標
-    function project(lon, lat) {
-      const xRatio = (lon - minLon) / (maxLon - minLon);
-      const yRatio = (maxLat - lat) / (maxLat - minLat);
-      const x = mapPadding + xRatio * mapWidth;
-      const y = mapPadding + yRatio * mapHeight;
-      return { x, y };
+    // ゲームの初期化
+    function initGame() {
+        // 都市データをシャッフルして問題リストを作成
+        currentQuestions = [...citiesData].sort(() => 0.5 - Math.random());
+        // 全問やると長いので5問に制限（変更可能）
+        currentQuestions = currentQuestions.slice(0, 5);
+        
+        currentQuestionIndex = 0;
+        score = 0;
+        isAnswering = true;
+
+        document.getElementById('quiz-screen').style.display = 'block';
+        document.getElementById('result-screen').style.display = 'none';
+        
+        updateStatus();
+        loadQuestion();
     }
 
-    // スコア管理
-    let totalQuestions = 0;
-    let totalCorrect = 0;
-
-    // 現在の問題
-    let currentCorrectCity = null;
-    let answered = false;
-
-    const svg = document.getElementById("us-map");
-    const questionEl = document.getElementById("question");
-    const feedbackEl = document.getElementById("feedback");
-    const scoreEl = document.getElementById("score");
-    const nextBtn = document.getElementById("next-btn");
-
-    const letters = ["A", "B", "C", "D"];
-
-    // 配列をシャッフル（Fisher-Yates）
-    function shuffle(arr) {
-      const a = arr.slice();
-      for (let i = a.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [a[i], a[j]] = [a[j], a[i]];
-      }
-      return a;
+    // ステータス表示の更新
+    function updateStatus() {
+        document.getElementById('score').textContent = `スコア: ${score}`;
+        document.getElementById('progress').textContent = `残り: ${currentQuestions.length - currentQuestionIndex}問`;
     }
 
-    // 新しい問題を作る
-    function newQuestion() {
-      answered = false;
-      feedbackEl.textContent = "";
-      feedbackEl.style.color = "#333";
+    // 問題の読み込みとドットの配置
+    function loadQuestion() {
+        const targetCity = currentQuestions[currentQuestionIndex];
+        document.getElementById('question-text').textContent = `「${targetCity.name}」はどこ？`;
+        document.getElementById('feedback').textContent = "";
+        
+        const dotsContainer = document.getElementById('dots-container');
+        dotsContainer.innerHTML = ''; // 前のドットを消去
 
-      // すでにあるマーカーを消す
-      const oldMarkers = svg.querySelectorAll(".marker-group");
-      oldMarkers.forEach(m => m.remove());
+        // 選択肢を用意する（正解1つ + ダミー2つ）
+        let candidates = [targetCity];
+        
+        // ダミーの都市をランダムに選ぶ（正解以外から）
+        let otherCities = citiesData.filter(c => c.name !== targetCity.name);
+        // シャッフルして2つ選ぶ
+        otherCities.sort(() => 0.5 - Math.random());
+        candidates.push(otherCities[0]);
+        candidates.push(otherCities[1]);
 
-      // 正解の都市をランダムに1つ選ぶ
-      const correctIndex = Math.floor(Math.random() * cities.length);
-      currentCorrectCity = cities[correctIndex];
+        // 候補（正解+ダミー）をシャッフルして表示順をランダムにする
+        candidates.sort(() => 0.5 - Math.random());
 
-      // 誤答として他の都市から3つ選ぶ
-      const others = cities.filter((_, idx) => idx !== correctIndex);
-      const wrongChoices = shuffle(others).slice(0, 3);
-
-      // 4択にしてシャッフル
-      let options = [currentCorrectCity, ...wrongChoices];
-      options = shuffle(options);
-
-      // 問題テキスト
-      questionEl.textContent = `Q. 「${currentCorrectCity.nameJa}（${currentCorrectCity.nameEn}）」はどの位置？`;
-
-      // マーカーをSVGに追加
-      options.forEach((city, idx) => {
-        const { x, y } = project(city.lon, city.lat);
-        const letter = letters[idx];
-
-        const g = document.createElementNS("http://www.w3.org/2000/svg", "g");
-        g.setAttribute("class", "marker-group");
-
-        const circle = document.createElementNS("http://www.w3.org/2000/svg", "circle");
-        circle.setAttribute("cx", x);
-        circle.setAttribute("cy", y);
-        circle.setAttribute("r", 10);
-        circle.setAttribute("fill", "#ffeb3b"); // 黄色っぽい
-        circle.setAttribute("class", "marker-circle");
-
-        // data属性でどの都市か持たせておく
-        circle.dataset.cityId = city.id;
-
-        // ラベル（A,B,C,D）
-        const labelText = document.createElementNS("http://www.w3.org/2000/svg", "text");
-        labelText.setAttribute("x", x + 14);
-        labelText.setAttribute("y", y + 4);
-        labelText.setAttribute("class", "marker-label");
-        labelText.textContent = letter;
-
-        // クリックイベント
-        circle.addEventListener("click", () => {
-          if (answered) return;
-          answered = true;
-          totalQuestions++;
-
-          const isCorrect = (city.id === currentCorrectCity.id);
-          if (isCorrect) {
-            totalCorrect++;
-            feedbackEl.textContent = "正解！よくできました。";
-            feedbackEl.style.color = "#2e7d32"; // 緑
-            circle.setAttribute("fill", "#4caf50");
-          } else {
-            feedbackEl.textContent = `残念！正解は「${currentCorrectCity.nameJa}（${currentCorrectCity.nameEn}）」です。`;
-            feedbackEl.style.color = "#c62828"; // 赤
-            circle.setAttribute("fill", "#ef9a9a");
-
-            // 正解マーカーを強調表示
-            const allCircles = svg.querySelectorAll(".marker-circle");
-            allCircles.forEach(c => {
-              if (c.dataset.cityId === currentCorrectCity.id) {
-                c.setAttribute("fill", "#4caf50");
-                c.setAttribute("r", 12);
-              }
-            });
-          }
-
-          updateScore();
+        // ドットを生成して配置
+        candidates.forEach(city => {
+            const dot = document.createElement('div');
+            dot.className = 'city-dot';
+            dot.style.top = city.top + '%';
+            dot.style.left = city.left + '%';
+            
+            // クリックイベント
+            dot.onclick = () => checkAnswer(city, targetCity, dot);
+            
+            dotsContainer.appendChild(dot);
         });
 
-        g.appendChild(circle);
-        g.appendChild(labelText);
-        svg.appendChild(g);
-      });
-
-      updateScore();
+        isAnswering = true;
     }
 
-    function updateScore() {
-      if (totalQuestions === 0) {
-        scoreEl.textContent = "スコア: まだ回答はありません。";
-      } else {
-        const rate = ((totalCorrect / totalQuestions) * 100).toFixed(1);
-        scoreEl.textContent = `スコア: ${totalCorrect} / ${totalQuestions} （正答率 ${rate}%）`;
-      }
+    // 正誤判定
+    function checkAnswer(selectedCity, correctCity, dotElement) {
+        if (!isAnswering) return;
+        isAnswering = false;
+
+        const feedback = document.getElementById('feedback');
+
+        if (selectedCity.name === correctCity.name) {
+            // 正解
+            score += 10;
+            feedback.textContent = "正解！";
+            feedback.className = "text-correct";
+            dotElement.classList.add('correct-anim');
+        } else {
+            // 不正解
+            feedback.textContent = `残念！正解は別の場所でした。`;
+            feedback.className = "text-wrong";
+            dotElement.classList.add('wrong-anim');
+            
+            // 正解のドットを教えてあげる
+            const dots = document.querySelectorAll('.city-dot');
+            dots.forEach(d => {
+                // 座標から正解のドットを探す（簡易的な判定）
+                if (d.style.top === correctCity.top + '%' && d.style.left === correctCity.left + '%') {
+                    d.classList.add('correct-anim');
+                }
+            });
+        }
+
+        updateStatus();
+
+        // 次の問題へ
+        setTimeout(() => {
+            currentQuestionIndex++;
+            if (currentQuestionIndex < currentQuestions.length) {
+                loadQuestion();
+            } else {
+                showResult();
+            }
+        }, 1500); // 1.5秒後に次へ
     }
 
-    // ボタンで次の問題へ
-    nextBtn.addEventListener("click", () => {
-      newQuestion();
-    });
+    // 結果表示
+    function showResult() {
+        document.getElementById('quiz-screen').style.display = 'none';
+        document.getElementById('result-screen').style.display = 'block';
+        document.getElementById('final-score').textContent = `${score}点 / ${currentQuestions.length * 10}点`;
+    }
 
-    // 初期表示
-    newQuestion();
-  </script>
+    // 再スタート
+    function restartGame() {
+        initGame();
+    }
+
+    // 初回起動
+    window.onload = initGame;
+</script>
+
 </body>
 </html>
